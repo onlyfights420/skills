@@ -1,0 +1,16 @@
+# Local secrets (the /mr context and any personal settings)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+.claude/settings.local.json
