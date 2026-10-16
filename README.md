@@ -41,6 +41,10 @@ Llena `GIT_NAME`, `GIT_EMAIL` y `GIT_SSH_KEY` con los datos de tu cuenta de GitH
 
 Los PR se integran con *rebase*, conservando el mensaje, el autor y el `Co-Authored-By` de cada *commit*.
 
+## Contribuir
+
+Lee [CONTRIBUTING.md](./CONTRIBUTING.md): cómo está organizado el repositorio, las reglas, cómo probar un cambio y cómo enviarlo.
+
 ## Licencia
 
 Licencia MIT; ver [LICENSE](./LICENSE).
