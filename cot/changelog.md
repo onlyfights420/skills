@@ -1,0 +1,175 @@
+---
+domain: documentation
+task: actualizar CHANGELOG.md correctamente evitando errores comunes de orden cronológico, cálculo de zona horaria, duplicación y mezcla de idiomas
+dificultad: alta
+longitud_objetivo: media
+validacion: CHANGELOG.md ordenado inversamente, fechas CST correctas, sin duplicados, idioma consistente con el idioma principal del repositorio
+---
+<!-- markdownlint-disable MD041 -->
+
+Razonamiento:
+
+- Regla principal: CHANGELOG.md debe seguir orden cronológico inverso (más reciente arriba) con fechas en CST Ciudad de México calculadas correctamente (ver «~/skills/CHANGELOG.md» ([../CHANGELOG.md](../CHANGELOG.md)), «~/skills/rulesets/LINGUISTICS.md» ([../rulesets/LINGUISTICS.md](../rulesets/LINGUISTICS.md)) y «~/skills/cot/committing.md» ([./committing.md](./committing.md))).
+- Errores comunes críticos: (1) orden cronológico incorrecto, (2) cálculo erróneo de CST (etiquetar UTC como CST), (3) duplicar entradas idénticas, (4) mezclar inglés con español mexicano.
+- Idioma: las entradas se redactan en el idioma principal del repositorio, sea personal o laboral: español mexicano o inglés internacional (UK); si hay varios idiomas sin uno claramente principal, inglés internacional (UK); ver paso 4.
+- Flujo: verificar zona horaria actual → revisar orden cronológico → detectar duplicados → aplicar reglas lingüísticas → validar estructura.
+- Este CoT se ejecuta vía `/changelogger` antes de `/commit`; el flujo `/commit` no edita changelog y solo valida que exista diff en `CHANGELOG.md`.
+
+Pasos:
+0) Acción: ejecutar `git --no-pager status --short` para validar todos los cambios antes de cualquier otra operación.
+   COMANDO OBLIGATORIO: `git --no-pager status --short`
+   HARD STOP ABSOLUTO: si este comando no se ejecutó en la corrida actual, detener el proceso y reiniciar desde 0.
+   Restricción: no se permite ejecutar lectura de changelog, `grep`, búsquedas, cálculo de fecha, cálculo de anclas, `diff` ni parches antes de completar y validar este paso.
+   Validación: confirmar visibilidad explícita del estado actual del árbol de trabajo.
+   Resultado: contexto inicial de cambios cargado y validado.
+0b) Acción: leer las líneas 1-200 de `CHANGELOG.md` antes de cualquier búsqueda o edición del archivo.
+   LECTURA OBLIGATORIA: leer `CHANGELOG.md` en el rango de líneas `1-200` con la herramienta de lectura de archivos del agente (o `sed -n '1,200p' CHANGELOG.md` si solo hay terminal)
+   HARD STOP ABSOLUTO: si esta lectura exacta no se ejecutó en la corrida actual, detener el proceso y reiniciar desde 0.
+   Restricción: no se permite ejecutar `grep`, búsquedas, cálculo de fecha, cálculo de anclas, `diff` ni parches antes de completar y validar este paso.
+   Validación: confirmar encabezado del día en turno, separación entre bloques de fecha y primera viñeta del bloque objetivo.
+   Resultado: contexto base exacto cargado antes de ejecutar `grep`, calcular anclas o intentar parches.
+0c) Acción: validar precondición transversal de los pasos 0 y 0b antes de cualquier otra sección.
+   Validación: exigir evidencia explícita en la corrida actual de `git --no-pager status --short` y de la lectura precisa `CHANGELOG.md` (1-200).
+   Regla de detención: si falta evidencia de cualquiera de los dos pasos, HARD STOP inmediato y reinicio desde 0; prohibido continuar o «corregir en caliente».
+   Resultado: ninguna sección posterior puede ejecutarse sin pasos 0 y 0b validados.
+
+1) Acción: calcular fecha y hora CST correcta y definir `DATE_CST`, que usan los pasos siguientes.
+   COMANDOS OBLIGATORIOS:
+   - `DATE_CST=$(TZ=America/Mexico_City date +"%Y-%m-%d")`
+   - `TZ=America/Mexico_City date +"%Y-%m-%d %H:%M:%S"` (hora de referencia)
+   Validación: confirmar cálculo matemático CST = UTC - 6 horas; si cada comando corre en un *shell* nuevo, volver a definir `DATE_CST` en el mismo comando que lo usa o sustituir el valor literal.
+   Resultado: fecha actual en CST en `DATE_CST` para la nueva entrada, nunca etiquetar hora UTC como CST.
+
+2) Acción: revisar estructura y orden cronológico del CHANGELOG.md.
+   COMANDO OBLIGATORIO: `grep -n "^## \[" CHANGELOG.md | head -10`
+   Validación: confirmar que fechas están ordenadas de más reciente a más antigua
+   Resultado: detectar entradas fuera de orden cronológico inverso.
+
+3) Acción: verificar si ya existe una entrada para la fecha CST actual.
+   COMANDO OBLIGATORIO: `grep -n "^## \[${DATE_CST}\]" CHANGELOG.md`
+   Decisión crítica:
+   - Si YA EXISTE entrada para esa fecha: agregar nuevas viñetas tipadas (`- feat: ...`, `- docs: ...`) DENTRO de la entrada existente. NO crear encabezado nuevo.
+   - Si NO existe: crear nuevo encabezado `## [YYYY-MM-DD] - Título descriptivo` en la posición correcta (arriba de todas las entradas).
+   Resultado: nunca dos encabezados con la misma fecha en el CHANGELOG.
+
+4) Acción: determinar el idioma principal del repositorio (personal o laboral) y validar consistencia de idioma en la nueva entrada.
+   Detección, en este orden:
+   - Si `CHANGELOG.md` ya tiene entradas: conservar su idioma, para que el archivo nunca mezcle idiomas.
+   - Sin entradas previas: idioma principal de `README.md` y la documentación (`*.md` en la raíz y en `docs/`). Mayoritariamente en español → español mexicano; mayoritariamente en inglés → inglés internacional (UK).
+   - Varios idiomas sin uno claramente principal (README bilingüe, README en inglés con documentación en español, etc.) → inglés internacional (UK).
+   - Sin README ni documentación → español mexicano (valor predeterminado).
+   Decisión:
+   - Español mexicano: aplicar reglas de ~/skills/rulesets/LINGUISTICS.md.
+   - Inglés internacional (UK): `-ise`/`-isation`, *colour*, *behaviour*, *licence* como sustantivo, *catalogue*; títulos en estilo oración; comillas dobles `""` en lugar de «»; sin cursivas en términos técnicos.
+   - Archivo nuevo: encabezado en el idioma detectado (`# Historial de cambios` + nota CST en español, o `# Changelog` + `**Note:** All dates are in Mexico City CST (UTC-6).`).
+   Invariantes: prefijos de tipo (`feat:`, `fix:`, etc.), formato `[YYYY-MM-DD]` y fecha CST no cambian con el idioma.
+   Resultado: idioma único y consistente con el repositorio; en español mexicano, sin calcos del inglés, comillas angulares «» y terminología técnica correcta.
+
+5) Acción: verificar formato de encabezado.
+   Formato requerido: `## [YYYY-MM-DD] - Título descriptivo`
+   Validación: solo fecha sin hora, título en estilo oración (primera mayúscula + nombres propios)
+   Resultado: encabezado conforme al formato establecido.
+6) Acción: organizar cambios en viñetas tipadas dentro de la fecha.
+   Formato de cada viñeta: `- tipo: descripción` (ej. `- feat: ...`, `- fix: ...`, `- docs: ...`)
+   Validación: no usar subencabezados `### tipo`; usar viñetas directas con prefijo de tipo
+   Resultado: entrada compacta y consistente.
+
+6b) Acción: insertar viñetas en orden cronológico inverso dentro de la entrada de fecha.
+   REGLA CRÍTICA: dentro del bloque de cada fecha, las viñetas van en orden cronológico inverso: el cambio más reciente queda hasta arriba, justo debajo del encabezado del día, y el más antiguo hasta abajo.
+   Corridas sucesivas el mismo día: la viñeta nueva va PRIMERO, arriba de la primera viñeta existente.
+   Varias viñetas en una misma corrida: ordénalas según el orden en que se harán sus *commits* atómicos, de modo que la del último *commit* (el que lleva `CHANGELOG.md`) quede hasta arriba y la del primero quede hasta abajo del grupo nuevo. `/commit` hace los *commits* siguiendo ese orden de abajo hacia arriba.
+   Nunca reordenes viñetas ya existentes; el orden solo se aplica a las que agregas en la corrida actual.
+   TÉCNICA DE EDICIÓN OBLIGATORIA con la herramienta de edición del agente (buscar y reemplazar: `search` es el texto exacto que se busca y `replace` el texto que lo sustituye, sea cual sea el nombre de los parámetros en la herramienta):
+
+- REGLA DE ORO: el `search` termina en la ÚLTIMA LÍNEA que se desea como ancla. El `replace` reproduce esa línea intacta y AÑADE el nuevo contenido ANTES o DESPUÉS de ella. NUNCA incluir en el `search` una línea que luego se reproduzca truncada o modificada en el `replace`.
+- REGLA OPERATIVA MANDATORIA para fecha existente: edición directa y simple en *hunk* único; una vez identificado el bloque objetivo, no repetir búsquedas exploratorias.
+- HARD STOP TRANSVERSAL: si en cualquier sección se detecta ausencia de evidencia de los pasos 0 o 0b en la corrida actual, detener de inmediato y reiniciar desde 0; no existen excepciones.
+- PRIMER INTENTO OBLIGATORIO para fecha existente: usar micro-bloque exacto en un solo *hunk* con `search` = `## [FECHA] - ...` + línea en blanco inmediata + primera viñeta existente.
+- En ese mismo *hunk*, el `replace` reproduce encabezado y línea en blanco intactos, inserta la viñeta nueva al tope y conserva la viñeta previa debajo.
+- Prohibido usar anclas parciales para fecha existente (por ejemplo, `search` con solo encabezado).
+- Prohibido insertar línea en blanco entre viñetas del mismo bloque de fecha.
+- Prohibido para fecha existente anclar `search` en el H1 del archivo (`# Historial de cambios` o `# Changelog`) o incluir ese encabezado en el *hunk* de inserción.
+- Prohibido reemplazar el bloque superior del archivo para insertar viñetas en una fecha existente.
+- MODO INSERCIÓN INCREMENTAL (OBLIGATORIO): de forma predeterminada solo se permiten adiciones (`+`). Si aparece cualquier línea eliminada (`-`) en `CHANGELOG.md`, abortar el parche y reconstruir ancla; solo se permiten borrados con instrucción explícita del usuario.
+   - Para insertar nueva entrada `## [FECHA]` al inicio del archivo: el `search` es SOLO la línea ancla inmediatamente anterior (p. ej. el comentario `<!-- markdownlint-disable -->` o la línea en blanco que lo sigue). El `replace` reproduce esa línea ancla exacta y añade la nueva entrada después. NUNCA incluir la primera `## [FECHA]` existente en el `search` a menos que se reproduzca COMPLETA e INTACTA en el `replace`.
+   - FALLBACK OBLIGATORIO (dos *hunks*) para nueva fecha si falta la línea en blanco antes del siguiente encabezado:
+     - Hunk 1: insertar el bloque `## [FECHA]` con sus viñetas arriba del siguiente `## [FECHA_ANTERIOR]`.
+     - Hunk 2: usar como ancla el siguiente encabezado `## [FECHA_ANTERIOR]` y reemplazarlo por `línea en blanco + el mismo encabezado` para forzar el separador.
+   - Prohibido repetir el mismo parche de inserción (`+6`) cuando la previsualización sigue sin separador en blanco.
+   - Si el `search` falla, volver a leer el bloque con la herramienta de lectura del agente para obtener el contenido exacto antes de reintentar.
+   Resultado: viñetas tipadas en orden cronológico inverso dentro de cada fecha: la más reciente arriba, debajo del encabezado del día.
+
+6c) Acción: validar diff mínimo inmediatamente después de cada edición.
+   COMANDO OBLIGATORIO: `git --no-pager diff -- CHANGELOG.md`
+   Criterio de aceptación obligatorio:
+   - En modo inserción incremental: solo líneas añadidas (`+`) en el bloque de la fecha objetivo.
+   - Cero líneas eliminadas (`-`) en todo `CHANGELOG.md`, salvo instrucción explícita del usuario para borrar.
+   - NUNCA editar líneas fuera de `DATE_CST` (día en turno) salvo instrucción explícita del usuario.
+   Gestión de fallos:
+   - Si falla la validación: releer bloque exacto y corregir una sola vez con edición mínima.
+   - Si en una inserción incremental aparece cualquier `-` en el diff: abortar ese intento y reconstruir ancla antes de reintentar.
+   - Si `DATE_CST` ya existe y solo se agrega una viñeta: mantener *hunk* único con micro-bloque exacto (`encabezado + línea en blanco + primera viñeta`); no usar el respaldo de dos *hunks*.
+   - Si se está creando nueva fecha y la previsualización muestra que falta la línea en blanco antes del siguiente `## [FECHA]`: aplicar de inmediato el fallback de dos *hunks*; no repetir el mismo parche de inserción.
+   - Si el diff muestra cambios históricos fuera de `DATE_CST`: detenerse y pedir confirmación; prohibido autocorregir entradas fuera del día en turno.
+   - Si vuelve a fallar: detenerse y pedir confirmación del usuario antes de cualquier nuevo intento.
+   - Prohibido encadenar 3 o más intentos seguidos sobre `CHANGELOG.md` sin validación intermedia exitosa.
+   Resultado: cambios mínimos, trazables y sin efectos colaterales.
+7) Acción: revisar texto del bloque de la fecha objetivo (`DATE_CST`).
+   COMANDO OBLIGATORIO: `grep -A 20 "^## \[${DATE_CST}\]" CHANGELOG.md` para revisar la entrada en turno (comillas dobles, para que `DATE_CST` se expanda)
+   Validación (SOLO en el bloque del día en turno): en español mexicano, detectar mezcla español-inglés, calcos y regionalismos no mexicanos; en inglés internacional (UK), detectar ortografía estadounidense (`-ize`, *color*, *behavior*, *license* como sustantivo) y mezcla con español
+   Resultado: ajustar únicamente las viñetas nuevas de `DATE_CST`; reportar inconsistencias históricas sin editarlas.
+
+8) Acción: aplicar reglas tipográficas según el idioma detectado en el paso 4.
+   Validación en español mexicano: guion medio en títulos, comillas angulares en texto, cursivas en préstamos técnicos.
+   Validación en inglés internacional (UK): guion medio en títulos, comillas dobles `""`, sin cursivas en términos técnicos.
+   Resultado: en español, *commit*, *pipeline*, *stack* en cursiva y «código» entre comillas angulares; en inglés internacional (UK), texto sin cursivas y "code" entre comillas dobles.
+
+9) Acción: verificar estructura final.
+   COMANDO OBLIGATORIO: `head -30 CHANGELOG.md` para revisar las primeras entradas
+   Validación: orden cronológico inverso, formato consistente, idioma homogéneo
+   Resultado: CHANGELOG.md ordenado correctamente con nueva entrada en posición adecuada.
+
+10) Acción: verificar precondición para `/commit` tras actualizar changelog.
+    COMANDOS RECOMENDADOS:
+    - `git --no-pager diff -- CHANGELOG.md`
+    - `git --no-pager diff --cached -- CHANGELOG.md`
+    Validación: debe existir al menos un cambio en `CHANGELOG.md` (en *staging* o fuera de él) para pasar la puerta de `/commit`.
+    Resultado: changelog listo para continuar con `/commit` sin edición adicional.
+
+VERIFICACIÓN CRÍTICA (antes de completar):
+- Confirmar: `TZ=America/Mexico_City date` ejecutado para fecha CST real
+- Validar: orden cronológico inverso con `grep "^## \[" CHANGELOG.md`
+- Verificar: sin duplicados con conteo de encabezados idénticos
+- Revisar: idioma único según el idioma principal del repositorio (paso 4): 100% español mexicano según LINGUISTICS.md, o 100% inglés internacional (UK)
+- Comprobar: formato de encabezado `[YYYY-MM-DD] - Título descriptivo`
+- Comprobar: viñetas con prefijo `tipo:` y ausencia de subencabezados `### tipo`
+- Validar: `git --no-pager diff -- CHANGELOG.md` cumple criterio de aceptación (solo adiciones mínimas en fecha objetivo)
+- Confirmar: existe evidencia explícita de los pasos 0 (`git --no-pager status --short`) y 0b (lectura precisa 1-200) en la corrida actual; si no existe, hard stop y reinicio
+- Confirmar: existe diff de `CHANGELOG.md` para pasar la puerta de `/commit`; si no existe, no continuar a `/commit`
+
+ANTI-PATRONES PROHIBIDOS (detener y pedir confirmación si ocurre cualquiera):
+1. Reintentar el mismo parche sobre el encabezado sin cambiar la ancla real del bloque.
+2. Escalar a reescritura total de `CHANGELOG.md` para insertar una viñeta puntual.
+3. Hacer más de un reintento sin releer antes el bloque exacto.
+4. Encadenar intentos fallidos sin validar diff en cada intento.
+5. NUNCA editar entradas fuera de `DATE_CST` (día en turno), salvo instrucción explícita del usuario.
+6. Continuar con `/commit` cuando `CHANGELOG.md` no está listo para la puerta (sin cambios o sin cumplir criterio de aceptación).
+7. Improvisar flujos alternos fuera de `/changelogger` y `/commit` para forzar edición.
+8. Repetir el mismo parche de inserción cuando la previsualización ya mostró que faltó la línea en blanco separadora.
+9. Insertar una línea en blanco entre viñetas del mismo bloque de fecha.
+10. Repetir búsquedas exploratorias cuando el bloque objetivo ya está identificado.
+11. Usar anclas parciales para fecha existente (como `search` de solo encabezado) en lugar del micro-bloque exacto del primer intento.
+12. Empezar con lectura de changelog, `grep`, búsquedas exploratorias o intentos de parche sin haber ejecutado `git --no-pager status --short` y sin haber leído `CHANGELOG.md` líneas `1-200` en esa ejecución; si ocurre, aplicar hard stop inmediato y reiniciar desde 0, nunca continuar desde pasos intermedios.
+13. Usar `search = encabezado + primer bullet` sin incluir la línea en blanco intermedia obligatoria en fecha existente.
+14. Anclar inserciones de fecha existente desde el H1 del archivo (`# Historial de cambios` o `# Changelog`) o reescribir el bloque superior del archivo.
+15. Aceptar un parche de «solo inserción» que muestre líneas eliminadas (`-`) en encabezados o separadores en blanco.
+16. Borrar cualquier línea existente de `CHANGELOG.md` durante inserciones incrementales sin instrucción explícita del usuario.
+17. Continuar cualquier sección del flujo sin evidencia explícita de `git --no-pager status --short` en la corrida actual.
+18. Continuar cualquier sección del flujo sin evidencia explícita de lectura precisa de `CHANGELOG.md` (1-200) en la corrida actual.
+19. Intentar reanudar el flujo después de omitir el paso 0 o 0b en vez de reiniciar desde 0.
+
+Conclusión:
+- Entregar: CHANGELOG.md actualizado con nueva entrada en posición cronológica correcta, fecha CST precisa, idioma consistente con el idioma principal del repositorio, sea español mexicano o inglés internacional (UK), sin duplicados y viñetas tipadas organizados semánticamente.
+- Evitar: mezclar idiomas, etiquetar UTC como CST, orden cronológico incorrecto, duplicar entradas, micro-cambios sin agrupar.
+- Operación esperada: ejecutar este CoT desde `/changelogger` y después invocar `/commit` (que solo valida la puerta del CHANGELOG y el idioma del *commit*).
+- Referencias: «~/skills/CHANGELOG.md» ([../CHANGELOG.md](../CHANGELOG.md)), «~/skills/rulesets/LINGUISTICS.md» ([../rulesets/LINGUISTICS.md](../rulesets/LINGUISTICS.md)), «~/skills/cot/committing.md» ([./committing.md](./committing.md)) para flujo completo.
