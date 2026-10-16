@@ -5,6 +5,8 @@
 <!-- markdownlint-disable MD013 MD024 MD022 MD032 -->
 ## [2026-10-16] - Primeras *skills* adaptadas de incognia/rules
 
+- docs: agregar `AGENTS.md` con las reglas para agentes de IA (rutas en `~/skills/`, nada personal, una regla en tres capas, no correr `sync_global.sh` sin permiso) y `CLAUDE.md` como enlace simbólico a él
+- docs: enlazar desde `CONTRIBUTING.md` las reglas generales y la política de seguridad de 4-20 Systems en `onlyfights420/.github`
 - docs: agregar `CONTRIBUTING.md` con cómo está organizado el repositorio (*skills*, CoT, *rulesets* y *scripts*), las reglas (rutas en `~/skills/`, nada personal en archivos versionados), cómo probar cada cambio y cómo enviarlo, y enlazarlo desde el `README.md`
 - docs: reescribir el `README.md` con lo que incluye el repositorio, la instalación en `~/skills/`, cómo crear tu `~/skills/.env` y el flujo de `/changelogger` y `/commit`; agregar este historial de cambios
 - chore: agregar el `.gitignore` (que bloquea `.env` y deja pasar `.env.example`) y poner a 4-20 Systems como titular del *copyright* en `LICENSE`
