@@ -2,6 +2,8 @@
 
 Estas *skills* las siguen agentes de IA al pie de la letra: un error en una regla se repite en cada *commit* de quien las use. Por eso cada cambio se prueba antes de integrarse.
 
+Esta guía complementa las [reglas generales de 4-20 Systems](https://github.com/onlyfights420/.github/blob/main/CONTRIBUTING.md) y su [política de seguridad](https://github.com/onlyfights420/.github/blob/main/SECURITY.md); si algo choca, manda esta guía.
+
 ## Antes de empezar
 
 - Instala el repositorio en `~/skills/` y crea tu `~/skills/.env` siguiendo el [README](./README.md#instalación).
